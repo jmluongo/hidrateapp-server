@@ -23,9 +23,30 @@ CURRENT_DIR = Path(__file__).resolve().parent
 SECRET_KEY = 'secret key'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': '/var/log/hidrate-server',
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
+
+
+
+ALLOWED_HOSTS = ['jml.fitsworthit.com', '127.0.0.1', 'localhost', '0.0.0.0']
 
 # Application definition
 
@@ -136,6 +157,10 @@ HIDRATE_REST_API_KEY_VALUE = 'z8ZVqRq1sKuXCyAKXlW1ENsmAzMNR03JHwnfmgk7'
 HIDRATE_CLIENT_KEY_HEADER = 'X-Parse-Client-Key'
 HIDRATE_CLIENT_KEY_VALUE = 'mWasknCNtr9dSQGPwUBWb5u4Ilf8Qkeqkwz9Q4eL'
 
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_SSL_REDIRECT = False
+APPEND_SLASH = False
 
 try:
     with open(CURRENT_DIR / 'local_settings.py') as f:

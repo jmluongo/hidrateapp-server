@@ -1,11 +1,16 @@
 import datetime
 import secrets
 import uuid
+import logging
+import requests
+import google.oauth2.credentials
+import google_auth_oauthlib.flow
 
 from django.contrib.auth.hashers import check_password, make_password
 from django.db import models
 from django.db.models import F, Sum
 from django.utils import timezone
+from django.shortcuts import redirect
 
 from hidrateapp.sessions.models import HidrateSession  # noqa: F401
 from hidrateapp.util import sanitize_isodate, unsanitize_isodate
@@ -363,6 +368,7 @@ class UserHealthStats(SerializableMixin, models.Model):
 
     def update_volume_stats(self, commit=True):
         self.volume = self.user.sip_set.aggregate(s=Sum('amount'))['s'] or 0
+        #logging.info("Volume: " + str(self.volume))
         self.goalMetCount = self.user.day_set.filter(totalAmount__gte=F('goal')).count()
         if commit:
             self.save()
@@ -426,8 +432,35 @@ class Day(SerializableMixin, models.Model):
         resp['locationUsed'] = self.serialize_field('isLocationUsed')
         return resp
 
+    def sendToGFit(value):
+        url = "https://www.googleapis.com/fitness/v1/users/me/dataSources"
+        CLIENT_ID = "757691581070-7ipdsijqd36eludglrkfl5lbh4mf6mhe.apps.googleusercontent.com"
+        CLIENT_SECRET = "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"
+
+        OAUTH_SCOPE = "https://www.googleapis.com/auth/fitness.nutrition.write"
+        DATA_SOURCE = "raw:com.google.hydration:407408718192:HydrationSource"
+
+        REDIRECT_URI = "http://localhost:5000"
+
+        start = time.time_ns()
+        end = start
+
+        flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
+            'client_secret.json',
+            scopes=[OAUTH_SCOPE])
+        flow.redirect_uri = REDIRECT_URI
+
+        authorization_url, state = flow.authorization_url(
+            access_type='offline',
+            include_granted_scopes='true')
+
+        return redirect(authorization_url)
+
+
     def update_volume_stats(self, commit=True):
         self.totalAmount = self.sip_set.aggregate(s=Sum('amount'))['s'] or 0
+        logging.info("Amount: " + str(self.totalAmount))
+        sendToGFit(self.totalAmount)
         self.totalBottleAmount = (
             self.sip_set
             .filter(bottleSerialNumber__isnull=False)

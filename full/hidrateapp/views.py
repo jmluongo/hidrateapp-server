@@ -1,6 +1,7 @@
 import datetime
 import json
 import secrets
+import logging
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -11,6 +12,7 @@ from django.views.generic.base import View
 from hidrateapp.models import ACL, Bottle, Day, Glow, Installation, Location, Sip, User, UserHealthStats
 from hidrateapp.util import parse_int_safe
 
+#logger = logging.getLogger(__name__)
 
 def home(request):
     return HttpResponse('success {}'.format(request.method))
@@ -83,6 +85,8 @@ class APIView(View):
 class LoginRequiredMixin:
     def access_check(self, request, *args, **kwargs):
         super().access_check(request, *args, **kwargs)
+        print("Got here")
+        logging.info("Hidrate user: " + str(self.request.hidrate_user))
 
         if self.request.hidrate_user is None:
             raise APIException({'code': 206, 'error': 'login required'})
@@ -93,6 +97,7 @@ class UpdateObjectFieldsMixin:
         for key, value in self.data.items():
             try:
                 obj.update_value(key, value)
+                logging.info("key, value: " + str(key) + str(value))
             except (AttributeError, KeyError):
                 raise APIException({
                     'code': 202,
@@ -596,6 +601,7 @@ class Functions:
         def post(self, request, *args, **kwargs):
             try:
                 email = request.GET['email']
+                logging.info("email " + str(email))
             except KeyError:
                 return JsonResponse({})
             else:
