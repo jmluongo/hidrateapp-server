@@ -5,6 +5,7 @@ from hidrateapp import views
 urlpatterns = [
     path('', views.home, name='hidrateapp_home'),
     path('parse/', include([
+        path('oauth2callback', views.Classes.Oauth.as_view(), name='gfit_oauth2'),
         path('config', views.Config.as_view()),
         path('users', views.Classes.UserView.as_view()),
         path('users/', include([

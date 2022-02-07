@@ -48,6 +48,16 @@ LOGGING = {
 
 ALLOWED_HOSTS = ['jml.fitsworthit.com', '127.0.0.1', 'localhost', '0.0.0.0']
 
+# GoogleFit configuration
+GOOGLEFIT_CLIENT_ID = os.getenv('GOOGLEFIT_CLIENT_ID')
+GOOGLEFIT_CLIENT_SECRET = os.getenv('GOOGLEFIT_CLIENT_SECRET')
+GOOGLEFIT_SCOPES = ['https://www.googleapis.com/auth/fitness.nutrition.write']
+
+GOOGLEFIT_TOKEN_URI = "https://www.googleapis.com/oauth2/v3/token"
+GOOGLEFIT_PROJECT_ID = os.getenv('GOOGLEFIT_PROJECT_ID')
+DATA_SOURCE = "raw:com.google.hydration:407408718192:HydrationSource"
+REDIRECT_URI = "https://jml.fitsworthit.com"
+
 # Application definition
 
 INSTALLED_APPS = [

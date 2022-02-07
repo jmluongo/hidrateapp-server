@@ -2,20 +2,78 @@ import datetime
 import json
 import secrets
 import logging
+import google.oauth2.credentials
+import google_auth_oauthlib.flow
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.views.generic.base import View
+from django.contrib import messages
 
-from hidrateapp.models import ACL, Bottle, Day, Glow, Installation, Location, Sip, User, UserHealthStats
+from hidrateapp.models import ACL, Bottle, Day, Glow, Installation, Location, Sip, User, UserHealthStats, GoogleFitMember
 from hidrateapp.util import parse_int_safe
 
 #logger = logging.getLogger(__name__)
 
 def home(request):
     return HttpResponse('success {}'.format(request.method))
+
+def authorizeGFit(request):
+    url = "https://www.googleapis.com/fitness/v1/users/me/dataSources"
+    #CLIENT_ID = "757691581070-7ipdsijqd36eludglrkfl5lbh4mf6mhe.apps.googleusercontent.com"
+    #CLIENT_SECRET = "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"
+
+    #OAUTH_SCOPE = "https://www.googleapis.com/auth/fitness.nutrition.write"
+    #DATA_SOURCE = "raw:com.google.hydration:407408718192:HydrationSource"
+
+    #REDIRECT_URI = "http://localhost:5000"
+
+    start = time.time_ns()
+    end = start
+
+    flow = google_auth_oauthlib.flow.Flow.from_client_config(
+        settings.GOOGLEFIT_CLIENT_CONFIG,
+        scopes=settings.GOOGLEFIT_SCOPES)
+    flow.redirect_uri = settings.REDIRECT_URI
+
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true')
+    request.session['gfit_oauth2_state'] = state
+    messages.info('Auth URL is: ' + authorization_url)
+
+	return authorization_url
+
+
+def completeGFit(request):
+	if 'gfit_oauth2_state' not in request.session:
+		messages.warning('Auth with google failed.')
+		return
+
+	state = request.session['gfit_oauth2_state']
+    flow = google_auth_oauthlib.flow.Flow.from_client_config(
+        settings.GOOGLEFIT_CLIENT_CONFIG,
+        scopes=settings.GOOGLEFIT_SCOPES,
+        state=state)
+    flow.redirect_uri = settings.REDIRECT_URI
+
+    authorization_response = request.get_full_path()
+
+    flow.fetch_token(authorization_response=authorization_response)
+
+    credentials = flow.credentials
+
+    request.session['credentials'] = {
+        'token': credentials.token,
+        'refresh_token': credentials.refresh_token,
+        'token_uri': credentials.token_uri,
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'scopes': credentials.scopes }
+
+
 
 
 class APIException(Exception):
@@ -393,6 +451,12 @@ class SipMixin:
         for stat in self.object.user.userhealthstats_set.iterator():
             stat.update_volume_stats()
 
+class OauthMixin:
+
+	def callback():
+		OAUTH_SCOPE = "https://www.googleapis.com/auth/fitness.nutrition.write"
+		CLIENTS_SECRET_FILE = 'client_secret.json'
+
 
 class Classes:
     class InstallationView(CreateObjectMixin, APIView):
@@ -402,6 +466,15 @@ class Classes:
         get_acess_check = False
         put_access_check = False
         object_class = Installation
+
+    class Oauth(OauthMixin, APIView):
+        object_class = Oauth
+
+        def get_create_response(self, *args, **kwargs):
+            resp = super().get_create_response(*args, **kwargs)
+            resp['time'] = self.object.serialize_field('time')
+            return resp
+
 
     class UserView(CreateObjectMixin, APIView):
         object_class = User
